@@ -165,6 +165,18 @@ class SMPL_PT_Export(bpy.types.Panel):
         col.operator("object.export_unity_fbx")
 
 
+class SMPL_PT_AutoRig(bpy.types.Panel):
+    bl_label = "Auto Rigger"
+    bl_category = "Meshcapade"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column(align=True)
+        col.operator("object.auto_rig")
+
+
 class SMPL_PT_AdditionalTools(bpy.types.Panel):
     bl_label = "Additional Tools"
     bl_category = "Meshcapade"
@@ -198,5 +210,6 @@ UI_CLASSES = [
     SMPL_PT_Pose,
     SMPL_PT_Expression,
     # SMPL_PT_Export,  # this just doesn't seem that necissary and it's taking up space in the UI
+    SMPL_PT_AutoRig,
     SMPL_PT_AdditionalTools,
 ]
