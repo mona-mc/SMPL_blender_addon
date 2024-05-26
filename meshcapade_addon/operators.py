@@ -1335,7 +1335,7 @@ class OP_AutoRig(bpy.types.Operator):
 
         # Create the left leg pole vector
             pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_left_leg")
-            pole_vector_bone.head = drv_left_knee_bone.head + mathutils.Vector((0, -0.2, 0))
+            pole_vector_bone.head = drv_left_knee_bone.head + mathutils.Vector((0, 0, 100))
             pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
             pole_vector_bone.use_connect = False
             pole_vector_bone.parent = None
@@ -1348,6 +1348,13 @@ class OP_AutoRig(bpy.types.Operator):
             new_bone.tail = drv_right_knee_bone.tail + mathutils.Vector((0, 0, -30))
             new_bone.use_connect = False
             new_bone.parent = None
+
+            # Create the right leg pole vector
+            pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_right_leg")
+            pole_vector_bone.head = drv_right_knee_bone.head + mathutils.Vector((0, 0, 100))
+            pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
+            pole_vector_bone.use_connect = False
+            pole_vector_bone.parent = None
 
 
         bpy.ops.object.mode_set(mode='POSE')
@@ -1466,23 +1473,68 @@ class OP_AutoRig(bpy.types.Operator):
         # Hide the circle mesh object in the viewport
         circle_mesh.hide_set(True)        
 
+
+        # Select and rotate DRV_right_hip
+        bpy.ops.pose.select_all(action='DESELECT')
+        drv_right_hip_bone = armature.pose.bones.get("DRV_right_hip")
+        if drv_right_hip_bone:
+            drv_right_hip_bone.bone.select = True
+            armature.data.bones.active = drv_right_hip_bone.bone
+            bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
+
+        # Select and rotate DRV_right_knee
+        bpy.ops.pose.select_all(action='DESELECT')
+        drv_right_knee_bone = armature.pose.bones.get("DRV_right_knee")
+        if drv_right_knee_bone:
+            drv_right_knee_bone.bone.select = True
+            armature.data.bones.active = drv_right_knee_bone.bone
+            bpy.ops.transform.rotate(value=math.radians(-30), orient_axis='X')
+            # bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='Y') #Fix knee bending
+
+
+        # Select and rotate DRV_left_hip
+        bpy.ops.pose.select_all(action='DESELECT')
+        drv_left_hip_bone = armature.pose.bones.get("DRV_left_hip")
+        if drv_left_hip_bone:
+            drv_left_hip_bone.bone.select = True
+            armature.data.bones.active = drv_left_hip_bone.bone
+            bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
+
+        # Select and rotate DRV_left_knee
+        bpy.ops.pose.select_all(action='DESELECT')
+        drv_left_knee_bone = armature.pose.bones.get("DRV_left_knee")
+        if drv_left_knee_bone:
+            drv_left_knee_bone.bone.select = True
+            armature.data.bones.active = drv_left_knee_bone.bone
+            bpy.ops.transform.rotate(value=math.radians(-30), orient_axis='X')
+            # bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='Y') #Fix knee bending
+
+
         # Add an IK constraint to DRV_left_knee
         drv_left_knee_pose_bone = armature.pose.bones.get("DRV_left_knee")
         ctrl_ik_left_leg_bone = armature.pose.bones.get("CTRL_IK_left_leg")
+        ctrl_pv_left_leg_bone = armature.pose.bones.get("CTRL_PV_left_leg")
         if drv_left_knee_pose_bone and ctrl_ik_left_leg_bone:
             ik_constraint = drv_left_knee_pose_bone.constraints.new('IK')
             ik_constraint.target = armature
             ik_constraint.subtarget = ctrl_ik_left_leg_bone.name
             ik_constraint.chain_count = 2
+            ik_constraint.pole_target = armature
+            ik_constraint.pole_subtarget = ctrl_pv_left_leg_bone.name
+            ik_constraint.pole_angle = math.radians(16.35)
 
         # Add an IK constraint to DRV_right_knee
         drv_right_knee_pose_bone = armature.pose.bones.get("DRV_right_knee")
         ctrl_ik_right_leg_bone = armature.pose.bones.get("CTRL_IK_right_leg")
+        ctrl_pv_right_leg_bone = armature.pose.bones.get("CTRL_PV_right_leg")
         if drv_right_knee_pose_bone and ctrl_ik_right_leg_bone:
             ik_constraint = drv_right_knee_pose_bone.constraints.new('IK')
             ik_constraint.target = armature
             ik_constraint.subtarget = ctrl_ik_right_leg_bone.name
             ik_constraint.chain_count = 2
+            ik_constraint.pole_target = armature
+            ik_constraint.pole_subtarget = ctrl_pv_right_leg_bone.name
+            ik_constraint.pole_angle = math.radians(142)
 
 
 
