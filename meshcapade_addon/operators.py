@@ -1323,33 +1323,6 @@ class OP_AutoRig(bpy.types.Operator):
             if orig_bone.parent and orig_bone.parent.name in bone_map:
                 drv_bone.parent = armature.data.edit_bones[bone_map[orig_bone.parent.name]]
 
-
-        # Create the new unparented joint CTRL_IK_left_leg from DRV_left_knee
-        drv_left_knee_bone = armature.data.edit_bones.get("DRV_left_knee")
-        if drv_left_knee_bone:
-            new_bone = armature.data.edit_bones.new("CTRL_IK_left_leg")
-            new_bone.head = drv_left_knee_bone.tail
-            new_bone.tail = drv_left_knee_bone.tail + mathutils.Vector((0, 0, -30))
-            new_bone.use_connect = False
-            new_bone.parent = None
-
-        # Create the left leg pole vector
-            pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_left_leg")
-            pole_vector_bone.head = drv_left_knee_bone.head + mathutils.Vector((0, -0.2, 0))
-            pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
-            pole_vector_bone.use_connect = False
-            pole_vector_bone.parent = None
-
-        # Create the new unparented joint CTRL_IK_right_leg from DRV_right_knee
-        drv_right_knee_bone = armature.data.edit_bones.get("DRV_right_knee")
-        if drv_right_knee_bone:
-            new_bone = armature.data.edit_bones.new("CTRL_IK_right_leg")
-            new_bone.head = drv_right_knee_bone.tail
-            new_bone.tail = drv_right_knee_bone.tail + mathutils.Vector((0, 0, -30))
-            new_bone.use_connect = False
-            new_bone.parent = None
-
-
         bpy.ops.object.mode_set(mode='POSE')
 
         # Create and assign bone groups
@@ -1466,28 +1439,8 @@ class OP_AutoRig(bpy.types.Operator):
         # Hide the circle mesh object in the viewport
         circle_mesh.hide_set(True)        
 
-        # Add an IK constraint to DRV_left_knee
-        drv_left_knee_pose_bone = armature.pose.bones.get("DRV_left_knee")
-        ctrl_ik_left_leg_bone = armature.pose.bones.get("CTRL_IK_left_leg")
-        if drv_left_knee_pose_bone and ctrl_ik_left_leg_bone:
-            ik_constraint = drv_left_knee_pose_bone.constraints.new('IK')
-            ik_constraint.target = armature
-            ik_constraint.subtarget = ctrl_ik_left_leg_bone.name
-            ik_constraint.chain_count = 2
-
-        # Add an IK constraint to DRV_right_knee
-        drv_right_knee_pose_bone = armature.pose.bones.get("DRV_right_knee")
-        ctrl_ik_right_leg_bone = armature.pose.bones.get("CTRL_IK_right_leg")
-        if drv_right_knee_pose_bone and ctrl_ik_right_leg_bone:
-            ik_constraint = drv_right_knee_pose_bone.constraints.new('IK')
-            ik_constraint.target = armature
-            ik_constraint.subtarget = ctrl_ik_right_leg_bone.name
-            ik_constraint.chain_count = 2
-
-
-
         # Ensure we switch back to object mode at the end
-        # bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
         return {'FINISHED'}
 
 
