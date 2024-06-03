@@ -1254,6 +1254,7 @@ class OP_ResetPose(bpy.types.Operator):
         return {'FINISHED'}
 
 
+#######################################################################################################################################################################################
 
 def find_bone_world_location(bone_name, armature):
     # Access the armature's pose bones
@@ -1265,13 +1266,17 @@ def find_bone_world_location(bone_name, armature):
             return world_location
     return None
 
-def set_custom_shape_properties(drv_bone, scale=None, rotation=None, translation=None):
+def set_custom_shape_properties(DRV_bone, scale=None, rotation=None, translation=None):
     if scale:
-        drv_bone.custom_shape_scale_xyz = scale
+        DRV_bone.custom_shape_scale_xyz = scale
     if rotation:
-        drv_bone.custom_shape_rotation_euler = rotation
+        DRV_bone.custom_shape_rotation_euler = rotation
     if translation:
-        drv_bone.custom_shape_translation = translation
+        DRV_bone.custom_shape_translation = translation
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
 
 
@@ -1290,6 +1295,7 @@ class OP_AutoRig(bpy.types.Operator):
         # Ensure we are in object mode
         bpy.ops.object.mode_set(mode='OBJECT')
 
+
         # Create a circle mesh for custom shape
         bpy.ops.mesh.primitive_circle_add(radius=0.5, fill_type='NOTHING')
         circle_mesh = bpy.context.object
@@ -1297,13 +1303,77 @@ class OP_AutoRig(bpy.types.Operator):
         circle_mesh.display_type = 'WIRE'
         circle_mesh.rotation_euler[0] = math.pi / 2
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-
-        # Ensure the mesh object is not renderable and not selectable in the viewport
         circle_mesh.hide_render = True
         circle_mesh.hide_select = True
         circle_mesh.hide_viewport = False
 
-        # Make sure the armature is re-selected and active before creating DRV bones
+
+        # Create a cube mesh for custom shape
+        bpy.ops.mesh.primitive_cube_add(size=0.5)
+        cube_mesh = bpy.context.object
+        cube_mesh.name = "DRV_Cube_Shape"
+        cube_mesh.display_type = 'WIRE'
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        cube_mesh.hide_render = True
+        cube_mesh.hide_select = True
+        cube_mesh.hide_viewport = False
+
+
+        # Create a sphere shape using three circles
+        bpy.ops.object.empty_add(type='SPHERE', radius=0.5)
+        sphere_mesh = bpy.context.object
+        sphere_mesh.name = "DRV_Sphere_Shape"
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        sphere_mesh.hide_render = True
+        sphere_mesh.hide_select = True
+        sphere_mesh.hide_viewport = False
+
+
+        # Create a line mesh for custom shape
+        bpy.ops.mesh.primitive_cube_add(size=0.1)
+        line_mesh = bpy.context.object
+        line_mesh.name = "DRV_Line_Shape"
+        line_mesh.display_type = 'WIRE'
+        line_mesh.scale[0] = 10  # Make it a long thin line
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        line_mesh.hide_render = True
+        line_mesh.hide_select = True
+        line_mesh.hide_viewport = False
+
+
+        # Create a text shape mesh for custom shape
+        bpy.ops.object.text_add()
+        text_mesh = bpy.context.object
+        text_mesh.data.body = "IK/FK"
+        text_mesh.name = "DRV_Text_Shape"
+        text_mesh.display_type = 'WIRE'
+        text_mesh.scale = (0.5, 0.5, 0.5)
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)  # Only apply scale
+        text_mesh.hide_render = True
+        text_mesh.hide_select = True
+        text_mesh.hide_viewport = False
+
+
+        # Create a 
+        # Add a NURBS path
+        bpy.ops.curve.primitive_nurbs_path_add()
+        # Get the new NURBS path object
+        nurbs_path = bpy.context.object
+        # Set the name of the NURBS path
+        nurbs_path.name = "DRV_NURBS_Path_Shape"
+        # Set display type to 'WIRE'
+        nurbs_path.display_type = 'WIRE'
+        # Scale the NURBS path
+        nurbs_path.scale = (1, 1, 1)
+        # Apply the scale transformation
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        # Set object visibility settings
+        nurbs_path.hide_render = True
+        nurbs_path.hide_select = True
+        nurbs_path.hide_viewport = False
+
+
+        # Make sure the armature is re-selected and active before creating DRV_ bones
         context.view_layer.objects.active = armature
         bpy.ops.object.mode_set(mode='EDIT')
         bone_map = {}
@@ -1317,47 +1387,231 @@ class OP_AutoRig(bpy.types.Operator):
                 new_bone.layers = bone.layers
                 new_bone.use_deform = False
                 bone_map[bone.name] = new_bone_name
-        for orig_name, drv_name in bone_map.items():
-            drv_bone = armature.data.edit_bones[drv_name]
+        for orig_name, DRV_name in bone_map.items():
+            DRV_bone = armature.data.edit_bones[DRV_name]
             orig_bone = armature.data.edit_bones[orig_name]
             if orig_bone.parent and orig_bone.parent.name in bone_map:
-                drv_bone.parent = armature.data.edit_bones[bone_map[orig_bone.parent.name]]
+                DRV_bone.parent = armature.data.edit_bones[bone_map[orig_bone.parent.name]]
 
 
-        # Create the new unparented joint CTRL_IK_left_leg from DRV_left_knee
-        drv_left_knee_bone = armature.data.edit_bones.get("DRV_left_knee")
-        if drv_left_knee_bone:
+                # Define a list of necessary joints for the IK FK system
+        ik_fk_joints = [
+            "left_shoulder", "right_shoulder",
+            "left_elbow", "right_elbow",
+            "left_wrist", "right_wrist",
+            "left_hip", "right_hip",
+            "left_knee", "right_knee",
+            "left_ankle", "right_ankle"
+        ]
+
+        # Create the IK bones
+        ik_bone_map = {}
+        for joint in ik_fk_joints:
+            orig_bone = armature.data.edit_bones.get(joint)
+            if orig_bone:
+                ik_bone_name = "IK_" + joint
+                if ik_bone_name not in armature.data.edit_bones:
+                    ik_bone = armature.data.edit_bones.new(ik_bone_name)
+                    ik_bone.head = orig_bone.head
+                    ik_bone.tail = orig_bone.tail
+                    ik_bone.roll = orig_bone.roll
+                    ik_bone.use_deform = False  # Uncheck deform for the IK bones
+                    ik_bone.layers = orig_bone.layers  # Ensure the bone layers are maintained
+                    ik_bone_map[joint] = ik_bone_name
+
+        # Set the hierarchy for the IK bones
+        for joint, ik_bone_name in ik_bone_map.items():
+            orig_bone = armature.data.edit_bones.get(joint)
+            ik_bone = armature.data.edit_bones.get(ik_bone_name)
+            if orig_bone and ik_bone and orig_bone.parent and orig_bone.parent.name in ik_bone_map:
+                ik_bone.parent = armature.data.edit_bones[ik_bone_map[orig_bone.parent.name]]
+
+        # Set the hierarchy for specific IK bones
+        ik_hierarchy = {
+            "IK_left_shoulder": "DRV_left_collar",
+            "IK_right_shoulder": "DRV_right_collar",
+            "IK_left_hip": "DRV_pelvis",
+            "IK_right_hip": "DRV_pelvis",
+        }
+
+        for ik_bone_name, parent_name in ik_hierarchy.items():
+            ik_bone = armature.data.edit_bones.get(ik_bone_name)
+            parent_bone = armature.data.edit_bones.get(parent_name)
+            if ik_bone and parent_bone:
+                ik_bone.parent = parent_bone
+
+
+                # Create the FK bones
+        fk_bone_map = {}
+        for joint in ik_fk_joints:
+            orig_bone = armature.data.edit_bones.get(joint)
+            if orig_bone:
+                fk_bone_name = "FK_" + joint
+                if fk_bone_name not in armature.data.edit_bones:
+                    fk_bone = armature.data.edit_bones.new(fk_bone_name)
+                    fk_bone.head = orig_bone.head
+                    fk_bone.tail = orig_bone.tail
+                    fk_bone.roll = orig_bone.roll
+                    fk_bone.use_deform = False  # Uncheck deform for the FK bones
+                    fk_bone.layers = orig_bone.layers  # Ensure the bone layers are maintained
+                    fk_bone_map[joint] = fk_bone_name
+
+        # Set the hierarchy for the FK bones
+        for joint, fk_bone_name in fk_bone_map.items():
+            orig_bone = armature.data.edit_bones.get(joint)
+            fk_bone = armature.data.edit_bones.get(fk_bone_name)
+            if orig_bone and fk_bone and orig_bone.parent and orig_bone.parent.name in fk_bone_map:
+                fk_bone.parent = armature.data.edit_bones[fk_bone_map[orig_bone.parent.name]]
+
+        # Set the hierarchy for specific FK bones
+        fk_hierarchy = {
+            "FK_left_shoulder": "DRV_left_collar",
+            "FK_right_shoulder": "DRV_right_collar",
+            "FK_left_hip": "DRV_pelvis",
+            "FK_right_hip": "DRV_pelvis",
+        }
+
+        for fk_bone_name, parent_name in fk_hierarchy.items():
+            fk_bone = armature.data.edit_bones.get(fk_bone_name)
+            parent_bone = armature.data.edit_bones.get(parent_name)
+            if fk_bone and parent_bone:
+                fk_bone.parent = parent_bone
+
+
+        # Create the new unparented joint CTRL_IK_left_leg from IK_left_knee
+        IK_left_knee_bone = armature.data.edit_bones.get("IK_left_knee")
+        if IK_left_knee_bone:
             new_bone = armature.data.edit_bones.new("CTRL_IK_left_leg")
-            new_bone.head = drv_left_knee_bone.tail
-            new_bone.tail = drv_left_knee_bone.tail + mathutils.Vector((0, 0, -30))
+            new_bone.head = IK_left_knee_bone.tail
+            new_bone.tail = IK_left_knee_bone.tail + mathutils.Vector((0, 0, -30))
             new_bone.use_connect = False
+            new_bone.use_deform = False
             new_bone.parent = None
+
 
         # Create the left leg pole vector
             pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_left_leg")
-            pole_vector_bone.head = drv_left_knee_bone.head + mathutils.Vector((0, 0, 100))
+            pole_vector_bone.head = IK_left_knee_bone.head + mathutils.Vector((0, 0, 100))
             pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
             pole_vector_bone.use_connect = False
+            pole_vector_bone.use_deform = False
             pole_vector_bone.parent = None
 
-        # Create the new unparented joint CTRL_IK_right_leg from DRV_right_knee
-        drv_right_knee_bone = armature.data.edit_bones.get("DRV_right_knee")
-        if drv_right_knee_bone:
+
+        # Create the new unparented joint CTRL_IK_right_leg from IK_right_knee
+        IK_right_knee_bone = armature.data.edit_bones.get("IK_right_knee")
+        if IK_right_knee_bone:
             new_bone = armature.data.edit_bones.new("CTRL_IK_right_leg")
-            new_bone.head = drv_right_knee_bone.tail
-            new_bone.tail = drv_right_knee_bone.tail + mathutils.Vector((0, 0, -30))
+            new_bone.head = IK_right_knee_bone.tail
+            new_bone.tail = IK_right_knee_bone.tail + mathutils.Vector((0, 0, -30))
             new_bone.use_connect = False
+            new_bone.use_deform = False
             new_bone.parent = None
 
-            # Create the right leg pole vector
+
+        # Create the right leg pole vector
             pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_right_leg")
-            pole_vector_bone.head = drv_right_knee_bone.head + mathutils.Vector((0, 0, 100))
+            pole_vector_bone.head = IK_right_knee_bone.head + mathutils.Vector((0, 0, 100))
             pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
             pole_vector_bone.use_connect = False
+            pole_vector_bone.use_deform = False
             pole_vector_bone.parent = None
+
+        # Create the right leg pole vector
+        #IK_right_knee_bone = armature.data.edit_bones.get("IK_right_knee")
+        #if IK_right_knee_bone:
+            #pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_right_leg")
+            # Calculate the local Z direction in world coordinates
+            #local_z = IK_right_knee_bone.matrix.to_3x3() @ mathutils.Vector((0, 0, 1))
+            #pole_vector_bone.head = IK_right_knee_bone.head + local_z * -100
+            #pole_vector_bone.tail = pole_vector_bone.head + local_z * -15
+            #pole_vector_bone.use_connect = False
+            #pole_vector_bone.use_deform = False
+            #pole_vector_bone.parent = None
+
+
+
+    # Create the new unparented joint CTRL_IK_left_arm from IK_left_elbow
+        IK_left_elbow_bone = armature.data.edit_bones.get("IK_left_elbow")
+        if IK_left_elbow_bone:
+            new_bone = armature.data.edit_bones.new("CTRL_IK_left_arm")
+            new_bone.head = IK_left_elbow_bone.tail
+            new_bone.tail = IK_left_elbow_bone.tail + mathutils.Vector((0, 0, -30))
+            new_bone.use_connect = False
+            new_bone.use_deform = False
+            new_bone.parent = None
+
+        # Create the left arm pole vector
+        IK_left_elbow_bone = armature.data.edit_bones.get("IK_left_elbow")
+        if IK_left_elbow_bone:
+            pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_left_arm")
+            # Calculate the local Z direction in world coordinates
+            local_z = IK_left_elbow_bone.matrix.to_3x3() @ mathutils.Vector((0, 0, 1))
+            pole_vector_bone.head = IK_left_elbow_bone.head + local_z * -50
+            pole_vector_bone.tail = pole_vector_bone.head + local_z * -15
+            pole_vector_bone.use_connect = False
+            pole_vector_bone.use_deform = False
+            pole_vector_bone.parent = None
+
+        # Create the new unparented joint CTRL_IK_right_arm from IK_right_elbow
+        IK_right_elbow_bone = armature.data.edit_bones.get("IK_right_elbow")
+        if IK_right_elbow_bone:
+            new_bone = armature.data.edit_bones.new("CTRL_IK_right_arm")
+            new_bone.head = IK_right_elbow_bone.tail
+            new_bone.tail = IK_right_elbow_bone.tail + mathutils.Vector((0, 0, -30))
+            new_bone.use_connect = False
+            new_bone.use_deform = False
+            new_bone.parent = None
+
+        # Create the right arm pole vector
+        IK_right_elbow_bone = armature.data.edit_bones.get("IK_right_elbow")
+        if IK_right_elbow_bone:
+            pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_right_arm")
+            # Calculate the local Z direction in world coordinates
+            local_z = IK_right_elbow_bone.matrix.to_3x3() @ mathutils.Vector((0, 0, 1))
+            pole_vector_bone.head = IK_right_elbow_bone.head + local_z * -50
+            pole_vector_bone.tail = pole_vector_bone.head + local_z * -15
+            pole_vector_bone.use_connect = False
+            pole_vector_bone.use_deform = False
+            pole_vector_bone.parent = None
+
+
+        # Create the new unparented joint IKFK_SWITCH from head
+        head_bone = armature.data.edit_bones.get("head")
+        if head_bone:
+            new_bone = armature.data.edit_bones.new("IKFK_SWITCH")
+            new_bone.head = head_bone.tail + mathutils.Vector((0, 10, 0))
+            new_bone.tail = head_bone.tail + mathutils.Vector((0, 30, 0))
+            new_bone.use_connect = False
+            new_bone.use_deform = False
+            new_bone.parent = None
+
+        
+        # Create a new joint LINE_PV_left_leg from IK_left_knee (VISIBLE LINE FROM POLE VECTOR TO KNEE)
+        ik_left_knee_bone = armature.data.edit_bones.get("IK_left_knee")
+        ctrl_pv_left_leg_bone = armature.data.edit_bones.get("CTRL_PV_left_leg")
+
+        if ik_left_knee_bone and ctrl_pv_left_leg_bone:
+            # Create a new bone
+            new_bone = armature.data.edit_bones.new("LINE_PV_left_leg")
+            
+            # Set the head at the same location as the tail of CTRL_PV_left_leg
+            new_bone.head = ik_left_knee_bone.head
+            
+            # Set the tail at the same location as the head 
+            new_bone.tail = ctrl_pv_left_leg_bone.head
+
+            # Set the parent to IK_left_knee
+            new_bone.parent = ik_left_knee_bone
+            new_bone.use_connect = False
+            new_bone.use_deform = False
+
+
+    
 
 
         bpy.ops.object.mode_set(mode='POSE')
+
 
         # Create and assign bone groups
         deform_group = armature.pose.bone_groups.new(name="DEFORM")
@@ -1368,167 +1622,269 @@ class OP_AutoRig(bpy.types.Operator):
         driver_right_group.color_set = 'THEME03'
         driver_other_group = armature.pose.bone_groups.new(name="DRIVER_OTHER")
         driver_other_group.color_set = 'THEME02'
-        for orig_name, drv_name in bone_map.items():
+        
+        ik_system_group = armature.pose.bone_groups.new(name="IK_SYSTEM")
+        ik_color = hex_to_rgb('00FFFF')  # Custom color 00FFFF
+        ik_system_group.color_set = 'CUSTOM'
+        ik_system_group.colors.normal = ik_color
+        ik_system_group.colors.select = ik_color
+        ik_system_group.colors.active = ik_color
+
+        fk_system_group = armature.pose.bone_groups.new(name="FK_SYSTEM")
+        fk_color = hex_to_rgb('FFFF00')  # Custom color FFFF00
+        fk_system_group.color_set = 'CUSTOM'
+        fk_system_group.colors.normal = fk_color
+        fk_system_group.colors.select = fk_color
+        fk_system_group.colors.active = fk_color
+
+        # Change custom shapes of the IK and PV joints
+        ctrl_bones = [
+            "CTRL_IK_left_leg", "CTRL_IK_right_leg",
+            "CTRL_PV_left_leg", "CTRL_PV_right_leg",
+            "CTRL_IK_left_arm", "CTRL_IK_right_arm",
+            "CTRL_PV_left_arm", "CTRL_PV_right_arm",
+            "IKFK_SWITCH",
+            "LINE_PV_left_leg"
+        ]
+        for bone_name in ctrl_bones:
+                    bone = armature.pose.bones.get(bone_name)
+                    if bone:
+                        if 'CTRL_PV' in bone_name:
+                            bone.custom_shape = sphere_mesh
+                            set_custom_shape_properties(bone, scale=(0.5, 0.5, 0.5))
+                        elif '_arm' in bone_name:
+                            bone.custom_shape = cube_mesh
+                            set_custom_shape_properties(bone, scale=(0.5, 1, 1))
+                        elif 'IKFK_SWITCH' in bone_name:
+                            bone.custom_shape = text_mesh
+                            set_custom_shape_properties(bone, scale=(1, 1, 1))
+                        elif 'LINE_' in bone_name:
+                            bone.custom_shape = nurbs_path
+                            set_custom_shape_properties(bone, scale=(0.25, 1, 1),
+                                                        rotation=(0, 0, math.radians(90)),
+                                                        translation=(0, 50, 0))
+                        else:
+                            bone.custom_shape = cube_mesh
+                            set_custom_shape_properties(bone, scale=(1, 1, 0.5))
+                        bone.bone.show_wire = True
+                        bone.bone_group = ik_system_group
+
+        # Assign IK bones to IK_SYSTEM
+        ik_bones = [
+            "IK_left_shoulder", "IK_left_elbow", "IK_left_wrist",
+            "IK_right_shoulder", "IK_right_elbow", "IK_right_wrist",
+            "IK_left_hip", "IK_left_knee", "IK_left_ankle",
+            "IK_right_hip", "IK_right_knee", "IK_right_ankle",
+        ]
+        for bone_name in ik_bones:
+                    bone = armature.pose.bones.get(bone_name)
+                    if bone:
+                        bone.bone.show_wire = True
+                        bone.bone_group = ik_system_group
+
+        # Assign FK bones to FK_SYSTEM
+        fk_bones = [
+            "FK_left_shoulder", "FK_left_elbow", "FK_left_wrist",
+            "FK_right_shoulder", "FK_right_elbow", "FK_right_wrist",
+            "FK_left_hip", "FK_left_knee", "FK_left_ankle",
+            "FK_right_hip", "FK_right_knee", "FK_right_ankle",
+        ]
+        for bone_name in fk_bones:
+                    bone = armature.pose.bones.get(bone_name)
+                    if bone:
+                        bone.bone.show_wire = True
+                        bone.bone_group = fk_system_group
+
+        for orig_name, DRV_name in bone_map.items():
             orig_bone = armature.pose.bones[orig_name]
-            orig_bone.bone_group = deform_group
-            orig_bone.bone.hide = True  # Hide original bones in viewport
-            drv_bone = armature.pose.bones[drv_name]
-            drv_bone.custom_shape = circle_mesh
-            if drv_name == "DRV_root":  # Apply the custom rotation to the DRV_root bone
-                drv_bone.custom_shape_rotation_euler[0] = math.pi / 2
-            drv_bone.bone_group = driver_left_group if "left" in drv_name.lower() \
-                                  else driver_right_group if "right" in drv_name.lower() \
-                                  else driver_other_group
-            
             # Add constraints to original bones
             constraint = orig_bone.constraints.new('COPY_TRANSFORMS')
             constraint.target = armature
-            constraint.subtarget = drv_name
+            constraint.subtarget = DRV_name
+            orig_bone.bone_group = deform_group
+            orig_bone.bone.hide = True  # Hide original bones in viewport
+            DRV_bone = armature.pose.bones[DRV_name]
+            DRV_bone.custom_shape = circle_mesh
+            if DRV_name == "DRV_root":  # Apply the custom rotation to the DRV_root bone
+                DRV_bone.custom_shape_rotation_euler[0] = math.pi / 2
+            DRV_bone.bone_group = driver_left_group if "left" in DRV_name.lower() \
+                                  else driver_right_group if "right" in DRV_name.lower() \
+                                  else driver_other_group
 
-            # Specific conditions for DRV bones
-            if drv_name == "DRV_spine1":
-                set_custom_shape_properties(drv_bone, 
+            # Specific conditions for DRV_bones
+            if DRV_name == "DRV_spine1":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(3, 3, 3), 
                                             rotation=(math.radians(5), 0, math.radians(4.9)))
-            elif drv_name == "DRV_spine2":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_spine2":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(6, 6, 6), 
                                             rotation=(math.radians(-36.5), math.radians(-12), 0))
-            elif drv_name == "DRV_spine3":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_spine3":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(3.5, 3.5, 3.5))
-            elif drv_name == "DRV_pelvis":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_pelvis":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(4.5, 4.5, 4.5))
-            elif drv_name == "DRV_left_hip":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_left_hip":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.7, 0.7, 0.7), 
                                             rotation=(math.radians(-2.6), 0, math.radians(-3.88)),
                                             translation=(0, 6.6, 5))
-            elif drv_name == "DRV_right_hip":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_right_hip":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.7, 0.7, 0.7), 
                                             rotation=(math.radians(-2.4), 0, math.radians(4.6)),
                                             translation=(0, 6, 5))
-            elif drv_name == "DRV_left_knee":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_left_knee":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.5, 0.5, 0.5),
                                             rotation=(math.radians(-2.9), 0, math.radians(1.4)))
-            elif drv_name == "DRV_right_knee":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_right_knee":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.5, 0.5, 0.5),
                                             rotation=(math.radians(-2.8), 0, 0))
-            elif drv_name == "DRV_root":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_root":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(10, 10, 10))
-            elif drv_name == "DRV_neck":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_neck":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(1.2, 1.2, 1.2), 
                                             rotation=(math.radians(-8), 0, math.radians(3)),
                                             translation=(0, 5, 0))
-            elif drv_name == "DRV_left_eye":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_left_eye":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.4, 0.4, 0.4), 
                                             translation=(0, 15, 0))
-            elif drv_name == "DRV_right_eye":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_right_eye":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.4, 0.4, 0.4), 
                                             translation=(0, 15, 0))
-            elif drv_name == "DRV_head":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_head":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(2.2, 2.2, 2.2), 
                                             translation=(0, 5, -0.5))
-            elif drv_name == "DRV_jaw":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_jaw":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.3, 0.3, 0.3), 
                                             rotation=(math.radians(-27), 0, 0),
                                             translation=(0, 12.7, -1))
-            elif drv_name == "DRV_left_elbow":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_left_elbow":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.7, 0.7, 0.7))
-            elif drv_name == "DRV_right_elbow":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_right_elbow":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.7, 0.7, 0.7))
-            elif drv_name == "DRV_left_shoulder":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_left_shoulder":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.8, 0.8, 0.8), 
                                             rotation=(math.radians(6.5), 0, math.radians(8)),
                                             translation=(0, 6.5, 0))
-            elif drv_name == "DRV_right_shoulder":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_right_shoulder":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(0.8, 0.8, 0.8), 
                                             rotation=(math.radians(5), 0, math.radians(-8)),
                                             translation=(0, 6.5, 0))
-            elif drv_name == "DRV_left_collar":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_left_collar":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(1, 1, 1), 
                                             rotation=(math.radians(8), 0, math.radians(-35)),
                                             translation=(-5.7, 11.1, 0))
-            elif drv_name == "DRV_right_collar":
-                set_custom_shape_properties(drv_bone, 
+            elif DRV_name == "DRV_right_collar":
+                set_custom_shape_properties(DRV_bone, 
                                             scale=(1, 1, 1), 
                                             rotation=(math.radians(5), 0, math.radians(35)),
                                             translation=(5.7, 11.1, 0))
     
-        # Hide the circle mesh object in the viewport
-        circle_mesh.hide_set(True)        
+
+        # Hide the control mesh objects in the viewport
+        circle_mesh.hide_set(True)
+        cube_mesh.hide_set(True) 
+        sphere_mesh.hide_set(True)
+        line_mesh.hide_set(True)
+        text_mesh.hide_set(True)
+        nurbs_path.hide_set(True)
 
 
-        # Select and rotate DRV_right_hip
+        # Add constraints to DRV_ bones for IK bones
+        for orig_name, ik_name in ik_bone_map.items():
+            drv_bone_name = "DRV_" + orig_name
+            drv_bone = armature.pose.bones.get(drv_bone_name)
+            if drv_bone:
+                constraint = drv_bone.constraints.new('COPY_TRANSFORMS')
+                constraint.target = armature
+                constraint.subtarget = ik_name
+
+        # Add constraints to DRV_ bones for FK bones
+        for orig_name, fk_name in fk_bone_map.items():
+            drv_bone_name = "DRV_" + orig_name
+            drv_bone = armature.pose.bones.get(drv_bone_name)
+            if drv_bone:
+                constraint = drv_bone.constraints.new('COPY_TRANSFORMS')
+                constraint.target = armature
+                constraint.subtarget = fk_name
+
+
+        # Select and rotate IK_right_hip
         bpy.ops.pose.select_all(action='DESELECT')
-        drv_right_hip_bone = armature.pose.bones.get("DRV_right_hip")
-        if drv_right_hip_bone:
-            drv_right_hip_bone.bone.select = True
-            armature.data.bones.active = drv_right_hip_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
+        IK_right_hip_bone = armature.pose.bones.get("IK_right_hip")
+        if IK_right_hip_bone:
+            IK_right_hip_bone.bone.select = True
+            armature.data.bones.active = IK_right_hip_bone.bone
+            #bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
+            #bpy.ops.transform.rotate(value=math.radians(15), orient_axis='Z')
 
-        # Select and rotate DRV_right_knee
+
+        # Select and rotate IK_right_knee
         bpy.ops.pose.select_all(action='DESELECT')
-        drv_right_knee_bone = armature.pose.bones.get("DRV_right_knee")
-        if drv_right_knee_bone:
-            drv_right_knee_bone.bone.select = True
-            armature.data.bones.active = drv_right_knee_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(-30), orient_axis='X')
-            # bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='Y') #Fix knee bending
+        IK_right_knee_bone = armature.pose.bones.get("IK_right_knee")
+        if IK_right_knee_bone:
+            IK_right_knee_bone.bone.select = True
+            armature.data.bones.active = IK_right_knee_bone.bone
+            bpy.ops.transform.rotate(value=math.radians(-45), orient_axis='X')
+            bpy.ops.transform.rotate(value=math.radians(-3), orient_axis='Y') #Fix knee bending
 
 
-        # Select and rotate DRV_left_hip
+        # Select and rotate IK_left_hip
         bpy.ops.pose.select_all(action='DESELECT')
-        drv_left_hip_bone = armature.pose.bones.get("DRV_left_hip")
-        if drv_left_hip_bone:
-            drv_left_hip_bone.bone.select = True
-            armature.data.bones.active = drv_left_hip_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
+        IK_left_hip_bone = armature.pose.bones.get("IK_left_hip")
+        if IK_left_hip_bone:
+            IK_left_hip_bone.bone.select = True
+            armature.data.bones.active = IK_left_hip_bone.bone
+            #bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
+            #bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='Z')
 
-        # Select and rotate DRV_left_knee
+
+        # Select and rotate IK_left_knee
         bpy.ops.pose.select_all(action='DESELECT')
-        drv_left_knee_bone = armature.pose.bones.get("DRV_left_knee")
-        if drv_left_knee_bone:
-            drv_left_knee_bone.bone.select = True
-            armature.data.bones.active = drv_left_knee_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(-30), orient_axis='X')
-            # bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='Y') #Fix knee bending
+        IK_left_knee_bone = armature.pose.bones.get("IK_left_knee")
+        if IK_left_knee_bone:
+            IK_left_knee_bone.bone.select = True
+            armature.data.bones.active = IK_left_knee_bone.bone
+            bpy.ops.transform.rotate(value=math.radians(-45), orient_axis='X')
+            bpy.ops.transform.rotate(value=math.radians(3), orient_axis='Y') #Fix knee bending
 
 
-        # Add an IK constraint to DRV_left_knee
-        drv_left_knee_pose_bone = armature.pose.bones.get("DRV_left_knee")
+        # Add an IK constraint to IK_left_knee
+        IK_left_knee_pose_bone = armature.pose.bones.get("IK_left_knee")
         ctrl_ik_left_leg_bone = armature.pose.bones.get("CTRL_IK_left_leg")
         ctrl_pv_left_leg_bone = armature.pose.bones.get("CTRL_PV_left_leg")
-        if drv_left_knee_pose_bone and ctrl_ik_left_leg_bone:
-            ik_constraint = drv_left_knee_pose_bone.constraints.new('IK')
+        if IK_left_knee_pose_bone and ctrl_ik_left_leg_bone:
+            ik_constraint = IK_left_knee_pose_bone.constraints.new('IK')
             ik_constraint.target = armature
             ik_constraint.subtarget = ctrl_ik_left_leg_bone.name
             ik_constraint.chain_count = 2
             ik_constraint.pole_target = armature
             ik_constraint.pole_subtarget = ctrl_pv_left_leg_bone.name
-            ik_constraint.pole_angle = math.radians(16.35)
+            ik_constraint.pole_angle = math.radians(13.2)
 
-        # Add an IK constraint to DRV_right_knee
-        drv_right_knee_pose_bone = armature.pose.bones.get("DRV_right_knee")
+
+        # Add an IK constraint to IK_right_knee
+        IK_right_knee_pose_bone = armature.pose.bones.get("IK_right_knee")
         ctrl_ik_right_leg_bone = armature.pose.bones.get("CTRL_IK_right_leg")
         ctrl_pv_right_leg_bone = armature.pose.bones.get("CTRL_PV_right_leg")
-        if drv_right_knee_pose_bone and ctrl_ik_right_leg_bone:
-            ik_constraint = drv_right_knee_pose_bone.constraints.new('IK')
+        if IK_right_knee_pose_bone and ctrl_ik_right_leg_bone:
+            ik_constraint = IK_right_knee_pose_bone.constraints.new('IK')
             ik_constraint.target = armature
             ik_constraint.subtarget = ctrl_ik_right_leg_bone.name
             ik_constraint.chain_count = 2
@@ -1537,10 +1893,239 @@ class OP_AutoRig(bpy.types.Operator):
             ik_constraint.pole_angle = math.radians(142)
 
 
+       # Add an IK constraint to IK_left_elbow
+        IK_left_elbow_pose_bone = armature.pose.bones.get("IK_left_elbow")
+        ctrl_ik_left_arm_bone = armature.pose.bones.get("CTRL_IK_left_arm")
+        ctrl_pv_left_arm_bone = armature.pose.bones.get("CTRL_PV_left_arm")
+        if IK_left_elbow_pose_bone and ctrl_ik_left_arm_bone:
+            ik_constraint = IK_left_elbow_pose_bone.constraints.new('IK')
+            ik_constraint.target = armature
+            ik_constraint.subtarget = ctrl_ik_left_arm_bone.name
+            ik_constraint.chain_count = 2
+            ik_constraint.pole_target = armature
+            ik_constraint.pole_subtarget = ctrl_pv_left_arm_bone.name
+            ik_constraint.pole_angle = math.radians(-90)
+
+         # Add an IK constraint to IK_right_elbow
+        IK_right_elbow_pose_bone = armature.pose.bones.get("IK_right_elbow")
+        ctrl_ik_right_arm_bone = armature.pose.bones.get("CTRL_IK_right_arm")
+        ctrl_pv_right_arm_bone = armature.pose.bones.get("CTRL_PV_right_arm")
+        if IK_right_elbow_pose_bone and ctrl_ik_right_arm_bone:
+            ik_constraint = IK_right_elbow_pose_bone.constraints.new('IK')
+            ik_constraint.target = armature
+            ik_constraint.subtarget = ctrl_ik_right_arm_bone.name
+            ik_constraint.chain_count = 2
+            ik_constraint.pole_target = armature
+            ik_constraint.pole_subtarget = ctrl_pv_right_arm_bone.name
+            ik_constraint.pole_angle = math.radians(-90)
+
+
+
+        bpy.ops.object.mode_set(mode='EDIT')
+
+
+         # Parent IK_left_ankle to CTRL_IK_left_leg while keeping the offset
+        IK_left_ankle_bone = armature.data.edit_bones.get("IK_left_ankle")
+        ctrl_ik_left_leg_bone = armature.data.edit_bones.get("CTRL_IK_left_leg")
+        if IK_left_ankle_bone and ctrl_ik_left_leg_bone:
+            bpy.ops.armature.select_all(action='DESELECT')
+            IK_left_ankle_bone.select = True
+            ctrl_ik_left_leg_bone.select = True
+            armature.data.edit_bones.active = ctrl_ik_left_leg_bone
+            bpy.ops.armature.parent_set(type='OFFSET')
+
+
+         # Parent IK_right_ankle to CTRL_IK_right_leg while keeping the offset
+        IK_right_ankle_bone = armature.data.edit_bones.get("IK_right_ankle")
+        ctrl_ik_right_leg_bone = armature.data.edit_bones.get("CTRL_IK_right_leg")
+        if IK_right_ankle_bone and ctrl_ik_right_leg_bone:
+            bpy.ops.armature.select_all(action='DESELECT')
+            IK_right_ankle_bone.select = True
+            ctrl_ik_right_leg_bone.select = True
+            armature.data.edit_bones.active = ctrl_ik_right_leg_bone
+            bpy.ops.armature.parent_set(type='OFFSET')
+
+         # Parent IK_left_wrist to CTRL_IK_left_arm while keeping the offset
+        IK_left_wrist_bone = armature.data.edit_bones.get("IK_left_wrist")
+        ctrl_ik_left_arm_bone = armature.data.edit_bones.get("CTRL_IK_left_arm")
+        if IK_left_wrist_bone and ctrl_ik_left_arm_bone:
+            bpy.ops.armature.select_all(action='DESELECT')
+            IK_left_wrist_bone.select = True
+            ctrl_ik_left_arm_bone.select = True
+            armature.data.edit_bones.active = ctrl_ik_left_arm_bone
+            bpy.ops.armature.parent_set(type='OFFSET')
+
+
+         # Parent IK_right_wrist to CTRL_IK_right_arm while keeping the offset
+        IK_right_wrist_bone = armature.data.edit_bones.get("IK_right_wrist")
+        ctrl_ik_right_arm_bone = armature.data.edit_bones.get("CTRL_IK_right_arm")
+        if IK_right_wrist_bone and ctrl_ik_right_arm_bone:
+            bpy.ops.armature.select_all(action='DESELECT')
+            IK_right_wrist_bone.select = True
+            ctrl_ik_right_arm_bone.select = True
+            armature.data.edit_bones.active = ctrl_ik_right_arm_bone
+            bpy.ops.armature.parent_set(type='OFFSET')
+
+
+        # Parent IKFK_SWITCH, IK and PV joints to DRV_root while keeping the offset
+        DRV_root_bone = armature.data.edit_bones.get("DRV_root")
+        if DRV_root_bone:
+            ik_pv_bones = ["CTRL_IK_left_leg", "CTRL_IK_right_leg", "CTRL_PV_left_leg", "CTRL_PV_right_leg", "CTRL_IK_left_arm", "CTRL_IK_right_arm",
+                           "CTRL_PV_left_arm", "CTRL_PV_right_arm", "IKFK_SWITCH"]
+            for bone_name in ik_pv_bones:
+                bone = armature.data.edit_bones.get(bone_name)
+                if bone:
+                    bpy.ops.armature.select_all(action='DESELECT')
+                    bone.select = True
+                    DRV_root_bone.select = True
+                    armature.data.edit_bones.active = DRV_root_bone
+                    bpy.ops.armature.parent_set(type='OFFSET')
+
+        bpy.ops.object.mode_set(mode='POSE')
+
+
+        # Add a Copy Location constraint to IK_left_ankle
+        IK_left_ankle_pose_bone = armature.pose.bones.get("IK_left_ankle")
+        IK_left_knee_pose_bone = armature.pose.bones.get("IK_left_knee")
+        if IK_left_ankle_pose_bone and IK_left_knee_pose_bone:
+            copy_loc_constraint = IK_left_ankle_pose_bone.constraints.new('COPY_LOCATION')
+            copy_loc_constraint.target = armature
+            copy_loc_constraint.subtarget = IK_left_knee_pose_bone.name
+            copy_loc_constraint.head_tail = 1.0 
+
+
+        # Add a Copy Location constraint to IK_right_ankle
+        IK_right_ankle_pose_bone = armature.pose.bones.get("IK_right_ankle")
+        IK_right_knee_pose_bone = armature.pose.bones.get("IK_right_knee")
+        if IK_right_ankle_pose_bone and IK_right_knee_pose_bone:
+            copy_loc_constraint = IK_right_ankle_pose_bone.constraints.new('COPY_LOCATION')
+            copy_loc_constraint.target = armature
+            copy_loc_constraint.subtarget = IK_right_knee_pose_bone.name
+            copy_loc_constraint.head_tail = 1.0 
+
+
+        
+        # Add a Copy Location constraint to IK_left_wrist
+        IK_left_wrist_pose_bone = armature.pose.bones.get("IK_left_wrist")
+        IK_left_elbow_pose_bone = armature.pose.bones.get("IK_left_elbow")
+        if IK_left_wrist_pose_bone and IK_left_elbow_pose_bone:
+            copy_loc_constraint = IK_left_wrist_pose_bone.constraints.new('COPY_LOCATION')
+            copy_loc_constraint.target = armature
+            copy_loc_constraint.subtarget = IK_left_elbow_pose_bone.name
+            copy_loc_constraint.head_tail = 1.0 
+
+
+        # Add a Copy Location constraint to IK_right_wrist
+        IK_right_wrist_pose_bone = armature.pose.bones.get("IK_right_wrist")
+        IK_right_elbow_pose_bone = armature.pose.bones.get("IK_right_elbow")
+        if IK_right_wrist_pose_bone and IK_right_elbow_pose_bone:
+            copy_loc_constraint = IK_right_wrist_pose_bone.constraints.new('COPY_LOCATION')
+            copy_loc_constraint.target = armature
+            copy_loc_constraint.subtarget = IK_right_elbow_pose_bone.name
+            copy_loc_constraint.head_tail = 1.0 
+
+
+
+        ikfk_switch_bone = armature.pose.bones.get("IKFK_SWITCH")
+
+        def set_custom_property(bone, prop_name, min_value, max_value):
+            if prop_name not in bone.keys():
+                bone[prop_name] = 0.0
+            bone['_RNA_UI'] = bone.get('_RNA_UI', {})
+            bone['_RNA_UI'][prop_name] = {
+                'min': min_value,
+                'max': max_value,
+                'soft_min': min_value,
+                'soft_max': max_value,
+                'default': 1.0
+            }
+
+        if ikfk_switch_bone:
+            set_custom_property(ikfk_switch_bone, "IK/FK Arm L", 0.0, 1.0)
+            set_custom_property(ikfk_switch_bone, "IK/FK Arm R", 0.0, 1.0)
+            set_custom_property(ikfk_switch_bone, "IK/FK Leg L", 0.0, 1.0)
+            set_custom_property(ikfk_switch_bone, "IK/FK Leg R", 0.0, 1.0)
+
+        if ikfk_switch_bone:
+            ikfk_switch_bone["IK/FK Arm L"] = 1.0
+            ikfk_switch_bone["_RNA_UI"] = ikfk_switch_bone.get("_RNA_UI", {})
+            ikfk_switch_bone["_RNA_UI"]["IK/FK Arm L"] = {"override_library": {"id": None, "property": "IK/FK Arm L"}}
+            
+            ikfk_switch_bone["IK/FK Arm R"] = 1.0
+            ikfk_switch_bone["_RNA_UI"]["IK/FK Arm R"] = {"override_library": {"id": None, "property": "IK/FK Arm R"}}
+            
+            ikfk_switch_bone["IK/FK Leg L"] = 1.0
+            ikfk_switch_bone["_RNA_UI"]["IK/FK Leg L"] = {"override_library": {"id": None, "property": "IK/FK Leg L"}}
+            
+            ikfk_switch_bone["IK/FK Leg R"] = 1.0
+            ikfk_switch_bone["_RNA_UI"]["IK/FK Leg R"] = {"override_library": {"id": None, "property": "IK/FK Leg R"}}
+
+        # Function to add driver to the Influence parameter of a constraint
+        def add_driver_to_constraint(bone_name, constraint_name, prop_name):
+            bone = armature.pose.bones.get(bone_name)
+            if bone:
+                for constraint in bone.constraints:
+                    if constraint.name == constraint_name:
+                        fcurve = constraint.driver_add("influence")
+                        driver = fcurve.driver
+                        driver.type = 'AVERAGE'
+                        var = driver.variables.new()
+                        var.name = "var"
+                        var.type = 'SINGLE_PROP'
+                        target = var.targets[0]
+                        target.id_type = 'OBJECT'
+                        target.id = armature
+                        target.data_path = f'pose.bones["IKFK_SWITCH"]["{prop_name}"]'
+                        driver.expression = "var"
+
+
+
+        # Add the driver to the specified joints and constraints for the left arm
+        add_driver_to_constraint("DRV_left_shoulder", "Copy Transforms.001", "IK/FK Arm L")
+        add_driver_to_constraint("DRV_left_elbow", "Copy Transforms.001", "IK/FK Arm L")
+        add_driver_to_constraint("DRV_left_wrist", "Copy Transforms.001", "IK/FK Arm L")
+
+        # Add the driver to the specified joints and constraints for the right arm
+        add_driver_to_constraint("DRV_right_shoulder", "Copy Transforms.001", "IK/FK Arm R")
+        add_driver_to_constraint("DRV_right_elbow", "Copy Transforms.001", "IK/FK Arm R")
+        add_driver_to_constraint("DRV_right_wrist", "Copy Transforms.001", "IK/FK Arm R")
+
+        # Add the driver to the specified joints and constraints for the left leg
+        add_driver_to_constraint("DRV_left_hip", "Copy Transforms.001", "IK/FK Leg L")
+        add_driver_to_constraint("DRV_left_knee", "Copy Transforms.001", "IK/FK Leg L")
+        add_driver_to_constraint("DRV_left_ankle", "Copy Transforms.001", "IK/FK Leg L")
+
+        # Add the driver to the specified joints and constraints for the right leg
+        add_driver_to_constraint("DRV_right_hip", "Copy Transforms.001", "IK/FK Leg R")
+        add_driver_to_constraint("DRV_right_knee", "Copy Transforms.001", "IK/FK Leg R")
+        add_driver_to_constraint("DRV_right_ankle", "Copy Transforms.001", "IK/FK Leg R")
+
+
+        # Ensure properties are library overridable and set limits
+        if ikfk_switch_bone:
+            for prop_name in ["IK/FK Arm L", "IK/FK Arm R", "IK/FK Leg L", "IK/FK Leg R"]:
+                ikfk_switch_bone.id_properties_ui(prop_name).update(min=0.0, max=1.0, soft_min=0.0, soft_max=1.0)
+
+
+        # Get the pose bone (VISIBLE LINE FOR POLE VECTOR)
+        pose_bone = armature.pose.bones.get("LINE_PV_left_leg")
+
+        if pose_bone:
+            # Add a Stretch To constraint
+            stretch_to = pose_bone.constraints.new(type='STRETCH_TO')
+            stretch_to.target = armature
+            stretch_to.subtarget = "CTRL_PV_left_leg"
+            stretch_to.head_tail = 0.0
+            stretch_to.rest_length = 100.0
+
 
         # Ensure we switch back to object mode at the end
         # bpy.ops.object.mode_set(mode='OBJECT')
         return {'FINISHED'}
+
+
+
+#######################################################################################################################################################################################
 
 
 
