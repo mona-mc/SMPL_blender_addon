@@ -2010,8 +2010,7 @@ class OP_AutoRig(bpy.types.Operator):
         if IK_right_hip_bone:
             IK_right_hip_bone.bone.select = True
             armature.data.bones.active = IK_right_hip_bone.bone
-            #bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
-            #bpy.ops.transform.rotate(value=math.radians(15), orient_axis='Z')
+
 
 
         # Select and rotate IK_right_knee
@@ -2020,8 +2019,6 @@ class OP_AutoRig(bpy.types.Operator):
         if IK_right_knee_bone:
             IK_right_knee_bone.bone.select = True
             armature.data.bones.active = IK_right_knee_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(-45), orient_axis='X')
-            bpy.ops.transform.rotate(value=math.radians(-3), orient_axis='Y') #Fix knee bending
 
 
         # Select and rotate IK_left_hip
@@ -2030,8 +2027,6 @@ class OP_AutoRig(bpy.types.Operator):
         if IK_left_hip_bone:
             IK_left_hip_bone.bone.select = True
             armature.data.bones.active = IK_left_hip_bone.bone
-            #bpy.ops.transform.rotate(value=math.radians(15), orient_axis='X')
-            #bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='Z')
 
 
         # Select and rotate IK_left_knee
@@ -2040,8 +2035,7 @@ class OP_AutoRig(bpy.types.Operator):
         if IK_left_knee_bone:
             IK_left_knee_bone.bone.select = True
             armature.data.bones.active = IK_left_knee_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(-45), orient_axis='X')
-            bpy.ops.transform.rotate(value=math.radians(3), orient_axis='Y') #Fix knee bending
+
 
         # Select and rotate IK_left_elbow
         bpy.ops.pose.select_all(action='DESELECT')
@@ -2049,8 +2043,6 @@ class OP_AutoRig(bpy.types.Operator):
         if IK_left_elbow_bone:
             IK_left_elbow_bone.bone.select = True
             armature.data.bones.active = IK_left_elbow_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(30), orient_axis='Z')
-            bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='X')
 
         # Select and rotate IK_right_elbow
         bpy.ops.pose.select_all(action='DESELECT')
@@ -2058,8 +2050,6 @@ class OP_AutoRig(bpy.types.Operator):
         if IK_right_elbow_bone:
             IK_right_elbow_bone.bone.select = True
             armature.data.bones.active = IK_right_elbow_bone.bone
-            bpy.ops.transform.rotate(value=math.radians(-30), orient_axis='Z')
-            bpy.ops.transform.rotate(value=math.radians(-15), orient_axis='X')
 
 
         # Add an IK constraint to IK_left_knee
@@ -2073,7 +2063,7 @@ class OP_AutoRig(bpy.types.Operator):
             ik_constraint.chain_count = 2
             ik_constraint.pole_target = armature
             ik_constraint.pole_subtarget = ctrl_pv_left_leg_bone.name
-            ik_constraint.pole_angle = math.radians(13.2)
+            ik_constraint.pole_angle = math.radians(-90)
 
 
         # Add an IK constraint to IK_right_knee
@@ -2087,7 +2077,7 @@ class OP_AutoRig(bpy.types.Operator):
             ik_constraint.chain_count = 2
             ik_constraint.pole_target = armature
             ik_constraint.pole_subtarget = ctrl_pv_right_leg_bone.name
-            ik_constraint.pole_angle = math.radians(142)
+            ik_constraint.pole_angle = math.radians(90)
 
 
        # Add an IK constraint to IK_left_elbow
