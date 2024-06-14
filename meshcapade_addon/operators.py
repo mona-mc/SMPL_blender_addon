@@ -1501,10 +1501,16 @@ class OP_AutoRig(bpy.types.Operator):
             new_bone.parent = None
 
 
+
+
         # Create the left leg pole vector
+        IK_left_knee_bone = armature.data.edit_bones.get("IK_left_knee")
+        if IK_left_knee_bone:
             pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_left_leg")
-            pole_vector_bone.head = IK_left_knee_bone.head + mathutils.Vector((0, 0, 100))
-            pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
+            # Calculate the local Z direction in world coordinates
+            local_z = IK_left_knee_bone.matrix.to_3x3() @ mathutils.Vector((0, 0, 1))
+            pole_vector_bone.head = IK_left_knee_bone.head + local_z * -100
+            pole_vector_bone.tail = pole_vector_bone.head + local_z * -15
             pole_vector_bone.use_connect = False
             pole_vector_bone.use_deform = False
             pole_vector_bone.parent = None
@@ -1521,25 +1527,18 @@ class OP_AutoRig(bpy.types.Operator):
             new_bone.parent = None
 
 
+
         # Create the right leg pole vector
+        IK_right_knee_bone = armature.data.edit_bones.get("IK_right_knee")
+        if IK_right_knee_bone:
             pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_right_leg")
-            pole_vector_bone.head = IK_right_knee_bone.head + mathutils.Vector((0, 0, 100))
-            pole_vector_bone.tail = pole_vector_bone.head + mathutils.Vector((0, 0, 15))
+            # Calculate the local Z direction in world coordinates
+            local_z = IK_right_knee_bone.matrix.to_3x3() @ mathutils.Vector((0, 0, 1))
+            pole_vector_bone.head = IK_right_knee_bone.head + local_z * 100
+            pole_vector_bone.tail = pole_vector_bone.head + local_z * 15
             pole_vector_bone.use_connect = False
             pole_vector_bone.use_deform = False
             pole_vector_bone.parent = None
-
-        # Create the right leg pole vector
-        #IK_right_knee_bone = armature.data.edit_bones.get("IK_right_knee")
-        #if IK_right_knee_bone:
-            #pole_vector_bone = armature.data.edit_bones.new("CTRL_PV_right_leg")
-            # Calculate the local Z direction in world coordinates
-            #local_z = IK_right_knee_bone.matrix.to_3x3() @ mathutils.Vector((0, 0, 1))
-            #pole_vector_bone.head = IK_right_knee_bone.head + local_z * -100
-            #pole_vector_bone.tail = pole_vector_bone.head + local_z * -15
-            #pole_vector_bone.use_connect = False
-            #pole_vector_bone.use_deform = False
-            #pole_vector_bone.parent = None
 
 
 
@@ -1892,12 +1891,10 @@ class OP_AutoRig(bpy.types.Operator):
             # Specific conditions for DRV_bones
             if DRV_name == "DRV_spine1":
                 set_custom_shape_properties(DRV_bone, 
-                                            scale=(3, 3, 3), 
-                                            rotation=(math.radians(5), 0, math.radians(4.9)))
+                                            scale=(3.5, 3.5, 3.5))
             elif DRV_name == "DRV_spine2":
                 set_custom_shape_properties(DRV_bone, 
-                                            scale=(6, 6, 6), 
-                                            rotation=(math.radians(-36.5), math.radians(-12), 0))
+                                            scale=(6, 6, 6))
             elif DRV_name == "DRV_spine3":
                 set_custom_shape_properties(DRV_bone, 
                                             scale=(3.5, 3.5, 3.5))
@@ -1927,8 +1924,7 @@ class OP_AutoRig(bpy.types.Operator):
                                             scale=(10, 10, 10))
             elif DRV_name == "DRV_neck":
                 set_custom_shape_properties(DRV_bone, 
-                                            scale=(1.2, 1.2, 1.2), 
-                                            rotation=(math.radians(-8), 0, math.radians(3)),
+                                            scale=(1.2, 1.2, 1.2),
                                             translation=(0, 5, 0))
             elif DRV_name == "DRV_left_eye":
                 set_custom_shape_properties(DRV_bone, 
