@@ -1366,8 +1366,7 @@ class OP_AutoRig(bpy.types.Operator):
         #text_mesh.hide_viewport = False
 
 
-        # Create a 
-        # Add a NURBS path
+        # Create a NURBS path for custom shape
         bpy.ops.curve.primitive_nurbs_path_add()
         # Get the new NURBS path object
         nurbs_path = bpy.context.object
@@ -1763,9 +1762,11 @@ class OP_AutoRig(bpy.types.Operator):
                             set_custom_shape_properties(bone, scale=(3, 3, 1),
                                                         translation=(0, 5, 0))
                             if 'left_leg' in bone_name:
-                                set_custom_shape_properties(bone, rotation=(math.radians(-1.95), math.radians(11.3), 0))
+                                set_custom_shape_properties(bone, rotation=(math.radians(-1.95), math.radians(11.3), 0), 
+                                                            translation=(0, 5, -0.95))
                             elif 'right_leg' in bone_name:
-                                set_custom_shape_properties(bone, rotation=(math.radians(-4.1), math.radians(-9.9), 0))
+                                set_custom_shape_properties(bone, rotation=(math.radians(-4.1), math.radians(-9.9), 0), 
+                                                            translation=(0, 5, -0.45))
 
                         bone.bone.show_wire = True
                     
@@ -1789,9 +1790,9 @@ class OP_AutoRig(bpy.types.Operator):
                                                         rotation=(math.radians(45), math.radians(0), math.radians(90)))
                         else:
                             bone.custom_shape = cube_mesh
-                            set_custom_shape_properties(bone, scale=(0.4, 0.4, 0.4),
-                                                        rotation=(math.radians(45), math.radians(0), math.radians(0)),
-                                                        translation=(0, 15, 0))
+                            set_custom_shape_properties(bone, scale=(0.5, 0.5, 0.5),
+                                                        rotation=(math.radians(45), math.radians(0), math.radians(90)),
+                                                        translation=(0, 2, 0))
                             
                     if bone:
                         if 'left' in bone_name:
@@ -1871,6 +1872,14 @@ class OP_AutoRig(bpy.types.Operator):
                 set_custom_shape_properties(bone, 
                                             scale=(0.5, 0.5, 0.5),
                                             rotation=(math.radians(-2.8), 0, 0))
+            elif 'FK_left_ankle' in bone_name:
+                set_custom_shape_properties(bone, 
+                                            translation=(0, -2.1, -2.1),
+                                            rotation=(math.radians(65.5), 0, math.radians(-26.5)))
+            elif 'FK_right_ankle' in bone_name:
+                set_custom_shape_properties(bone, 
+                                            translation=(0, -1.85, -1.45),
+                                            rotation=(math.radians(64), 0, math.radians(19)))
 
 
         for orig_name, DRV_name in bone_map.items():
