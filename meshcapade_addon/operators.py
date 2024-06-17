@@ -1326,9 +1326,43 @@ class OP_AutoRig(bpy.types.Operator):
         plane_mesh.name = "DRV_Plane_Shape"
         plane_mesh.display_type = 'WIRE'
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+
+        # Add the text
+        bpy.ops.object.text_add()
+        text_mesh = bpy.context.object
+        text_mesh.data.body = "IK/FK"
+        text_mesh.name = "DRV_Text_Shape"
+        text_mesh.display_type = 'WIRE'
+        text_mesh.scale = (0.3, 0.3, 0.3)
+
+        # Position the text below the plane
+        text_mesh.location = (-0.35, -0.5, 0)  # Adjust this as necessary to position the text correctly
+
+        # Apply the scale
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+        # Convert text object to mesh
+        bpy.context.view_layer.objects.active = text_mesh
+        bpy.ops.object.convert(target='MESH')
+
+        # Enter edit mode to perform limited dissolve
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')  # Select the entire text mesh
+        bpy.ops.mesh.dissolve_limited()
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+
+        # Join the text mesh with the plane mesh
+        bpy.context.view_layer.objects.active = plane_mesh
+        text_mesh.select_set(True)
+        plane_mesh.select_set(True)
+        bpy.ops.object.join()
+
+        # Ensure the combined mesh is set to not render or be selectable
         plane_mesh.hide_render = True
         plane_mesh.hide_select = True
         plane_mesh.hide_viewport = False
+
 
 
         # Create a sphere shape using three circles
@@ -1339,7 +1373,7 @@ class OP_AutoRig(bpy.types.Operator):
         sphere_mesh.hide_render = True
         sphere_mesh.hide_select = True
         sphere_mesh.hide_viewport = False
-
+        
 
         # Create a line mesh for custom shape
         bpy.ops.mesh.primitive_cube_add(size=0.1)
@@ -1352,22 +1386,7 @@ class OP_AutoRig(bpy.types.Operator):
         line_mesh.hide_select = True
         line_mesh.hide_viewport = False
 
-
-        # Create a text shape mesh for custom shape
-        #bpy.ops.object.text_add()
-        #text_mesh = bpy.context.object
-        #text_mesh.data.body = "IK/FK"
-        #text_mesh.name = "DRV_Text_Shape"
-        #text_mesh.display_type = 'WIRE'
-        #text_mesh.scale = (0.5, 0.5, 0.5)
-        #bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)  # Only apply scale
-        #text_mesh.hide_render = True
-        #text_mesh.hide_select = True
-        #text_mesh.hide_viewport = False
-
-
-        # Create a 
-        # Add a NURBS path
+        # Create a NURBS path
         bpy.ops.curve.primitive_nurbs_path_add()
         # Get the new NURBS path object
         nurbs_path = bpy.context.object
@@ -1762,9 +1781,9 @@ class OP_AutoRig(bpy.types.Operator):
                             set_custom_shape_properties(bone, scale=(3, 3, 1),
                                                         translation=(0, 5, -1.35),)
                             if 'left_leg' in bone_name:
-                                set_custom_shape_properties(bone, rotation=(math.radians(1.66), math.radians(6.93), 0))
+                                set_custom_shape_properties(bone, rotation=(math.radians(181.66), math.radians(6.93), 0))
                             elif 'right_leg' in bone_name:
-                                set_custom_shape_properties(bone, rotation=(math.radians(1.64), math.radians(-8.24), 0))
+                                set_custom_shape_properties(bone, rotation=(math.radians(181.64), math.radians(-8.24), 0))
 
                         bone.bone.show_wire = True
                     
@@ -1788,9 +1807,9 @@ class OP_AutoRig(bpy.types.Operator):
                                                         rotation=(math.radians(45), math.radians(0), math.radians(90)))
                         else:
                             bone.custom_shape = cube_mesh
-                            set_custom_shape_properties(bone, scale=(0.5, 0.5, 0.5),
+                            set_custom_shape_properties(bone, scale=(0.55, 0.55, 0.55),
                                                         rotation=(math.radians(45), math.radians(0), math.radians(90)),
-                                                        translation=(0, 2, 0))
+                                                        translation=(0, 0, 1.2))
                             
                     if bone:
                         if 'left' in bone_name:
@@ -1855,29 +1874,27 @@ class OP_AutoRig(bpy.types.Operator):
             elif 'FK_left_hip' in bone_name:
                 set_custom_shape_properties(bone, 
                                             scale=(0.7, 0.7, 0.7), 
-                                            rotation=(math.radians(-2.6), 0, math.radians(-3.88)),
-                                            translation=(0, 6.6, 5))
+                                            translation=(0, 6.6, 0))
             elif 'FK_right_hip' in bone_name:
                 set_custom_shape_properties(bone, 
                                             scale=(0.7, 0.7, 0.7), 
-                                            rotation=(math.radians(-2.4), 0, math.radians(4.6)),
-                                            translation=(0, 6, 5))
+                                            translation=(0, 6, 0))
             elif 'FK_left_knee' in bone_name:
                 set_custom_shape_properties(bone, 
                                             scale=(0.5, 0.5, 0.5),
-                                            rotation=(math.radians(-2.9), 0, math.radians(1.4)))
+                                            rotation=(math.radians(-8), 0, math.radians(0)))
             elif 'FK_right_knee' in bone_name:
                 set_custom_shape_properties(bone, 
                                             scale=(0.5, 0.5, 0.5),
-                                            rotation=(math.radians(-2.8), 0, 0))
+                                            rotation=(math.radians(8), 0, 0))
             elif 'FK_left_ankle' in bone_name:
                 set_custom_shape_properties(bone, 
-                                            translation=(0, -2.1, -2.1),
-                                            rotation=(math.radians(65.5), 0, math.radians(-26.5)))
+                                            translation=(0, 0, -2),
+                                            rotation=(math.radians(73.5), 0, math.radians(4)))
             elif 'FK_right_ankle' in bone_name:
                 set_custom_shape_properties(bone, 
-                                            translation=(0, -1.85, -1.45),
-                                            rotation=(math.radians(64), 0, math.radians(19)))
+                                            translation=(0, 0, 2),
+                                            rotation=(math.radians(-73.5), 0, math.radians(6)))
 
 
         for orig_name, DRV_name in bone_map.items():
